@@ -31,12 +31,9 @@ const createRecord = (key: number): Record => {
   };
 };
 
-export const VirtualGrid = () => {
-  const count = number("Count", 1000);
-  const records = useMemo(() => Array.from(Array(count), (_, i) => createRecord(i)), [count]);
-
+const Table = ({ records }: { records: Record[] }) => {
   return (
-    <VGrid count={count} fillerStyle={styles.filler}>
+    <VGrid count={records.length} fillerStyle={styles.filler}>
       <table style={styles.table}>
         <VGridHead>
           <thead>
@@ -70,5 +67,23 @@ export const VirtualGrid = () => {
         </tbody>
       </table>
     </VGrid>
+  );
+};
+
+export const VirtualGrid = () => {
+  const count = number("Count", 1000);
+  const records = useMemo(() => Array.from(Array(count), (_, i) => createRecord(i)), [count]);
+
+  return <Table records={records} />;
+};
+
+export const VirtualGridInScrollableContainer = () => {
+  const count = number("Count", 1000);
+  const records = useMemo(() => Array.from(Array(count), (_, i) => createRecord(i)), [count]);
+
+  return (
+    <div style={{ width: "80vw", height: "80vh", overflow: "auto" }}>
+      <Table records={records} />
+    </div>
   );
 };

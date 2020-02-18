@@ -26,17 +26,24 @@ const getRowSize = (entry: SizeCacheEntry): number => {
 const getAverageRowSize = ({ sizes }: GridRenderContext) => {
   // We're intentialy ignoring 0 height rows, though this may not always be the right choice...
   const rows = sizes.filter(Boolean);
+  if (rows.length === 0) {
+    return 0;
+  }
+
   const height = rows.reduce((sum: number, h: SizeCacheEntry) => sum + getRowSize(h), 0);
   return height / rows.length;
 };
 
-const getRenderHeight = ({ sizes, range }: GridRenderContext) => {
-  return sizes
-    .slice(range.start, range.end)
-    .reduce((sum: number, h: SizeCacheEntry) => sum + getRowSize(h), 0);
+const getRenderHeight = (sizes: SizeCacheEntry[], start: number, end: number, avg = 0) => {
+  // Since sizes can be a sparse array we need to manually iterate
+  let height = 0;
+  for (let i = start; i < end; i++) {
+    height += getRowSize(sizes[i]) || avg;
+  }
+  return height;
 };
 
-const getScrollParentFromRef = (
+const findScrollParent = (
   scrollerRef: RefObject<HTMLElement | null>,
   elRef: RefObject<HTMLDivElement | null>
 ) => {
@@ -46,23 +53,17 @@ const getScrollParentFromRef = (
   );
 };
 
-const getDimensions = (scroller: HTMLElement) => {
+const getScreenDimensions = (scroller: HTMLElement) => {
   if (scroller === document.body) {
-    const height = window.innerHeight;
-    const scrollTop = document.documentElement.scrollTop ?? document.body.scrollTop;
     return {
-      height,
-      scrollTop,
-      scrollBottom: scrollTop + height
+      windowHeight: window.innerHeight,
+      scrollTop: document.documentElement.scrollTop ?? document.body.scrollTop
     };
   }
 
-  const height = scroller.scrollHeight;
-  const scrollTop = scroller.scrollTop;
   return {
-    height,
-    scrollTop,
-    scrollBottom: scrollTop + height
+    windowHeight: scroller.scrollHeight,
+    scrollTop: scroller.scrollTop
   };
 };
 
@@ -93,11 +94,11 @@ export const VGrid: FunctionComponent<VGridProps> = ({
     size: minSize,
     range: { start: 0, end: Math.min(minSize, count) },
     offsets: [],
-    sizes: [],
+    sizes: Array(count),
     count
   }));
 
-  console.log(state.range);
+  console.log(state);
 
   const { size, top = 0, bottom = 0 } = state;
 
@@ -107,9 +108,9 @@ export const VGrid: FunctionComponent<VGridProps> = ({
     if (state.scrollTop != null) {
       // Keep scroll position in sync with top when a render is triggered.
       // This will help prevent content from appearing to jump when a new
-      // block is rendered - we are mutating state to avoid altering the
-      // scrollTop if we don't need to.
+      // block is rendered
       document.documentElement.scrollTop = document.body.scrollTop = state.scrollTop;
+      // We are mutating state to avoid altering the scrollTop if we don't need to.
       state.scrollTop = null;
     }
   }, [state]);
@@ -133,9 +134,9 @@ export const VGrid: FunctionComponent<VGridProps> = ({
         return o;
       }
 
-      const scroller = getScrollParentFromRef(scrollerRef, ref);
-      const windowHeight = scroller === document.body ? window.innerHeight : scroller.scrollHeight;
-      const renderHeight = getRenderHeight(o);
+      const scroller = findScrollParent(scrollerRef, ref);
+      const { windowHeight } = getScreenDimensions(scroller);
+      const renderHeight = getRenderHeight(o.sizes, o.range.start, o.range.end);
 
       if (renderHeight < windowHeight && renderSize === o.size) {
         // Content is not tall enough - need to increase size. We could be smarter about this by looking
@@ -158,78 +159,89 @@ export const VGrid: FunctionComponent<VGridProps> = ({
 
   useEffect(() => {
     let disconnected = false;
-    const scroller = getScrollParentFromRef(scrollerRef, ref);
+    const scroller = findScrollParent(scrollerRef, ref);
+    // Note that rootMargin doesn't work as expected when the component is within an iframe,
+    // which means the threshold will not be respected. I suspect there is a workaround here,
+    // but i haven't found it if so.
+    // see: https://github.com/w3c/IntersectionObserver/issues/283
     const root = scroller === document.body ? null : scroller;
     let { y: position } = topRef.current!.getBoundingClientRect();
 
     const calculate = () => {
-      // TODO: handle
-      // - scrolling up
-      // - scollable containers
-
       setState(o => {
         const { y } = topRef.current!.getBoundingClientRect();
         if (y === position) {
           return o;
         }
 
-        const dims = getDimensions(scrollerRef.current!);
-        console.log("window", dims);
-
-        console.log("y", y);
-        const { count, sizes } = o;
-        const { top, bottom } = ref.current!.getBoundingClientRect();
+        const { scrollTop, windowHeight } = getScreenDimensions(scrollerRef.current!);
         const avgRowHeight = getAverageRowSize(o);
-        let jump = -top;
+        let start = 0;
+        let top = 0;
 
-        //   if (o.top + jump === o.scrollTop) {
-        //     return o;
+        const down = y < position;
+        const targetHeight = down ? -y - threshold : -y + windowHeight + threshold;
+        let index = 0;
+
+        // while (index < o.count - o.size) {
+        //   const rowHeight = getRowSize(o.sizes[index]) || avgRowHeight;
+        //   if (top + rowHeight > targetHeight) {
+        //     break;
         //   }
 
-        //   if (o.top + jump < o.scrollTop) {
-        //     //            console.log("GOING UP?");
-        //     return o;
-        //   }
+        //   top += rowHeight;
+        //   index++;
+        // }
 
-        let { start, end } = o.range;
-        let height = 0;
+        // if (down) {
+        //   start = index;
+        // } else {
+        //   start = index - o.size;
+        // }
 
         if (y < position) {
-          // scrolling down
-          console.log("DOWN");
-          while (height < jump && start < count - o.size) {
-            height += getRowSize(sizes[start++]) || avgRowHeight;
-          }
+          while (start < o.count - o.size) {
+            const rowHeight = getRowSize(o.sizes[start]) || avgRowHeight;
+            if (top + rowHeight > -y - threshold) {
+              break;
+            }
 
-          jump = height; // Math.min(o.bottom, height);
-          end = start + o.size;
+            top += rowHeight;
+            start++;
+          }
         } else {
-          // scrolling up
-          console.log("UP");
-          while (height < bottom - window.innerHeight && end >= o.size) {
-            height += getRowSize(sizes[end--]) || avgRowHeight;
+          while (start < o.count - o.size) {
+            const rowHeight = getRowSize(o.sizes[start]) || avgRowHeight;
+            if (top + rowHeight > -y + windowHeight + threshold) {
+              break;
+            }
+
+            top += rowHeight;
+            start++;
           }
 
-          jump = -height;
-          start = end - o.size;
+          start -= o.size;
+          top = start > 0 ? getRenderHeight(o.sizes, 0, start, avgRowHeight) : 0;
         }
 
-        const newTop = start === 0 ? 0 : o.top + jump;
-        const newBottom = end === count ? 0 : o.bottom - jump;
+        start = Math.max(0, start);
+        const end = Math.min(o.count, start + o.size);
+        const bottom = end < o.count ? getRenderHeight(o.sizes, end, count, avgRowHeight) : 0;
         position = y;
 
         return {
           ...o,
           range: { start, end },
-          top: newTop,
-          bottom: newBottom,
-          scrollTop: newTop
+          top,
+          bottom,
+          scrollTop
         };
       });
     };
 
     const observer = new IntersectionObserver(
       entries => {
+        console.log(entries);
         if (!disconnected && entries.some(e => e.isIntersecting)) {
           calculate();
         }
@@ -240,8 +252,30 @@ export const VGrid: FunctionComponent<VGridProps> = ({
     observer.observe(bottomRef.current!);
     observer.observe(topRef.current!);
 
+    let handle: number;
+    const waitForScrollToStop = () => {
+      const { y } = topRef.current!.getBoundingClientRect();
+      handle = requestAnimationFrame(() => {
+        const { y: newY } = topRef.current!.getBoundingClientRect();
+        if (y === newY) {
+          calculate();
+        } else {
+          waitForScrollToStop();
+        }
+      });
+    };
+
+    const dragObserver = new IntersectionObserver(entries => {
+      if (!disconnected && entries.some(e => !e.isIntersecting)) {
+        waitForScrollToStop();
+      }
+    });
+
+    dragObserver.observe(ref.current!);
+
     return () => {
       disconnected = true;
+      cancelAnimationFrame(handle);
       observer.disconnect();
     };
   }, [threshold]);
