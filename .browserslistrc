@@ -1,0 +1,4 @@
+# The attempt here is to target browsers that support IntersectionObserver.
+> 0.5%
+not IE 11
+not IE_Mob 11

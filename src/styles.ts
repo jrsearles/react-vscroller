@@ -1,15 +1,14 @@
 import { CSSProperties } from "react";
 
-export const filler: CSSProperties = {
-  background:
-    "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAGElEQVQYlWNgYGCQwoKxgqGgcJA5h3yFAAs8BRWVSwooAAAAAElFTkSuQmCC) repeat"
-};
-
-export const container: CSSProperties = { width: "max-content" };
-
-export const body: CSSProperties = { width: "fit-content", padding: 0, margin: 0 };
+export const container: CSSProperties = { width: "fit-content" };
 
 // STORY STYLES
+export const filler: CSSProperties = {
+  background:
+    "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAGElEQVQYlWNgYGCQwoKxgqGgcJA5h3yFAAs8BRWVSwooAAAAAElFTkSuQmCC) repeat",
+  zIndex: -1
+};
+
 export const table: CSSProperties = {
   position: "relative",
   borderCollapse: "separate",
@@ -17,15 +16,23 @@ export const table: CSSProperties = {
   tableLayout: "fixed"
 };
 
-export const headerCell: CSSProperties = {
+export const stickyHeaderCell: CSSProperties = {
   backgroundColor: "white",
   borderBottomWidth: 1,
   borderBottomColor: "#ccc",
   borderBottomStyle: "solid",
   position: "sticky",
   top: 0,
-  padding: 6,
+  padding: 20,
   zIndex: 1
+};
+
+export const headerCell: CSSProperties = {
+  backgroundColor: "white",
+  borderBottomWidth: 1,
+  borderBottomColor: "#ccc",
+  borderBottomStyle: "solid",
+  padding: 20
 };
 
 export const cell: CSSProperties = {
@@ -33,5 +40,12 @@ export const cell: CSSProperties = {
   borderBottomColor: "#ccc",
   borderBottomStyle: "solid",
   padding: 6,
-  width: 100
+  wordWrap: "break-word",
+  verticalAlign: "top"
+};
+
+export const footerCell: CSSProperties = {
+  fontWeight: "bold",
+  padding: 20,
+  textAlign: "right"
 };
