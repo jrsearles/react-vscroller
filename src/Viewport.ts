@@ -12,7 +12,7 @@ export class Viewport {
   }
 
   get element() {
-    // Need to do this lazily so ref is set
+    // Need to do this lazily so ref is set beforehand
     return this._window || (this._window = getScrollParent(this._source.current!));
   }
 
