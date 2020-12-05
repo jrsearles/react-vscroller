@@ -9,5 +9,5 @@ type VScrollerItemProps = {
 
 export const VScrollerItem: FunctionComponent<VScrollerItemProps> = ({ index, children }) => {
   const { sizes } = useVScrollerState();
-  return <Resizer onResize={e => sizes.set(index, e.height)}>{children}</Resizer>;
+  return <Resizer onResize={(e) => sizes.set(index, e.height)}>{children}</Resizer>;
 };

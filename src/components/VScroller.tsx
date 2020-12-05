@@ -79,7 +79,7 @@ const adjustPageSize = (
 };
 
 const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerProps>>(
-  props => {
+  (props) => {
     const {
       pageSize = 100,
       threshold = 300,
@@ -131,7 +131,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       const strategy = new DynamicRowStrategy(topRef.current!, viewport, threshold);
 
       const update = () => {
-        setState(s => (mounted ? adjustFillers(strategy.update(s)) : s));
+        setState((s) => (mounted ? adjustFillers(strategy.update(s)) : s));
       };
 
       // Note that rootMargin doesn't work as expected when the component is within an iframe,
@@ -141,8 +141,8 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       const root = viewport.element === document.body ? null : viewport.element;
 
       const observer = new IntersectionObserver(
-        entries => {
-          if (entries.some(e => e.isIntersecting)) {
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
             update();
           }
         },
@@ -153,12 +153,12 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       observer.observe(topRef.current!);
 
       const dragObserver = new IntersectionObserver(
-        entries => {
+        (entries) => {
           // We're watching the rendered portion here - if this leaves the screen
           // either the element has scrolled off the screen OR the user is dragging
           // the scrollbar in a way that takes the current batch off the screen
           // before it renders.
-          if (entries.some(e => !e.isIntersecting)) {
+          if (entries.some((e) => !e.isIntersecting)) {
             waitForScrollToStop(topRef.current!).then(update);
           }
         },
@@ -186,7 +186,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
         }
 
         lastHeight = viewport.height;
-        setState(s => {
+        setState((s) => {
           if (!mounted) {
             return s;
           }
@@ -204,7 +204,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
 
     // Update when new data - reset size cache and adjust range if needed
     useEffect(() => {
-      setState(s => {
+      setState((s) => {
         const { size, sizes } = s;
 
         sizes.resize(count);
@@ -226,7 +226,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
     // On every render, make sure that enough records are rendered to fill the
     // screen - otherwise adjust the page size accordingly
     useEffect(() => {
-      setState(s => adjustPageSize(s, viewport, threshold));
+      setState((s) => adjustPageSize(s, viewport, threshold));
     });
 
     return (
