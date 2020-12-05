@@ -81,7 +81,7 @@ const Table = ({
   );
 
   useEffect(() => {
-    setSortedRecords(s => {
+    setSortedRecords((s) => {
       if (!sort.col) {
         return records;
       }
@@ -111,7 +111,7 @@ const Table = ({
   }, [records, sort]);
 
   const toggleSort = (col: number) => {
-    setSort(s => {
+    setSort((s) => {
       if (s.col === col) {
         switch (s.dir) {
           case "asc":
@@ -168,7 +168,7 @@ const Table = ({
           </VScroller.Head>
           <tbody>
             <VScroller.Body>
-              {index => (
+              {(index) => (
                 <tr>
                   <td style={styles.cell}>{String(sortedRecords[index].key + 1)}</td>
                   <td style={styles.cell}>{sortedRecords[index].col1}</td>
@@ -217,7 +217,7 @@ const List: FunctionComponent = () => {
         updateSignal={records}
       >
         <ul>
-          <VScroller.Body>{index => <li>{records[index].col4}</li>}</VScroller.Body>
+          <VScroller.Body>{(index) => <li>{records[index].col4}</li>}</VScroller.Body>
         </ul>
       </VScroller>
     </>

@@ -37,7 +37,7 @@ const MemoizedBody = memo<MemoizedBodyProps>(
       // need to determine how to cleanly do that...
       return (
         <>
-          {indices(start, end).map(index => (
+          {indices(start, end).map((index) => (
             <VScrollerItem key={index} index={index}>
               {(children as Renderer)(index)}
             </VScrollerItem>

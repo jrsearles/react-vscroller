@@ -12,8 +12,8 @@ let observer: ResizeObserver | null;
 const listen = (element: Element, handler: (entry: DOMRectReadOnly) => void) => {
   observer =
     observer ||
-    new ResizeObserver(entries => {
-      entries.forEach(e => listeners.get(e.target)?.(e.contentRect));
+    new ResizeObserver((entries) => {
+      entries.forEach((e) => listeners.get(e.target)?.(e.contentRect));
     });
 
   listeners.set(element, handler);
