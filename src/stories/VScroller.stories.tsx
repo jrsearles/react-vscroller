@@ -1,4 +1,5 @@
 import React, { useMemo, CSSProperties, useState, useEffect, FunctionComponent } from "react";
+import faker from "faker";
 import { number, withKnobs } from "@storybook/addon-knobs";
 import { VScroller, VScrollerProps, Range } from "..";
 import * as styles from "../styles";
@@ -11,33 +12,19 @@ export default {
 
 type Record = {
   key: number;
-  col1: string;
-  col2: string;
+  name: string;
+  address: string;
   col3: string;
   col4: string;
-};
-
-const randomInteger = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
-
-const randomString = (min: number, max: number) => {
-  const length = randomInteger(min, max);
-  return [...Array(length)].map(() => Math.random().toString(36)[2]).join("");
-};
-
-const randomPhrase = () => {
-  const words = randomInteger(1, 15);
-  return [...Array(words)].map(() => randomString(1, 15)).join(" ");
 };
 
 const createRecord = (key: number): Record => {
   return {
     key,
-    col1: randomPhrase(),
-    col2: randomPhrase(),
-    col3: randomPhrase(),
-    col4: randomPhrase()
+    name: faker.name.findName(),
+    address: faker.address.streetAddress(),
+    col3: faker.random.words(Math.random() * 20),
+    col4: faker.random.words(Math.random() * 50)
   };
 };
 
@@ -67,8 +54,8 @@ const Table = ({
 }: { headerStyle: CSSProperties; sticky?: boolean } & Partial<VScrollerProps>) => {
   const [range, setRange] = useState<Range>();
   const count = number("Count", 1000);
-  const threshold = number("Threshold", 300);
-  const minSize = number("MinSize", 100);
+  const threshold = number("Threshold", 100);
+  const minSize = number("MinSize", 50);
   const [sortedRecords, setSortedRecords] = useState<Array<Record>>([]);
   const [sort, setSort] = useState<{ col: number | null; dir: "asc" | "desc" | null }>({
     col: null,
@@ -142,25 +129,25 @@ const Table = ({
           <VScroller.Head sticky={sticky}>
             <thead>
               <tr>
-                <th style={headerStyle}>#</th>
-                <th style={headerStyle}>
+                <th style={{ ...headerStyle, width: "10%" }}>#</th>
+                <th style={{ ...headerStyle, width: "10%" }}>
                   <a onClick={() => toggleSort(1)}>
-                    Col 1 {sort.col === 1 && <SortIndicator dir={sort.dir} />}
+                    Name {sort.col === 1 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
-                <th style={headerStyle}>
+                <th style={{ ...headerStyle, width: "10%" }}>
                   <a onClick={() => toggleSort(2)}>
-                    Col 2 {sort.col === 2 && <SortIndicator dir={sort.dir} />}
+                    Address {sort.col === 2 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
-                <th style={headerStyle}>
+                <th style={{ ...headerStyle, width: "35%" }}>
                   <a onClick={() => toggleSort(3)}>
-                    Col 3 {sort.col === 3 && <SortIndicator dir={sort.dir} />}
+                    Random Text {sort.col === 3 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
-                <th style={headerStyle}>
+                <th style={{ ...headerStyle, width: "35%" }}>
                   <a onClick={() => toggleSort(4)}>
-                    Col 4 {sort.col === 4 && <SortIndicator dir={sort.dir} />}
+                    Random Details {sort.col === 4 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
               </tr>
@@ -171,8 +158,8 @@ const Table = ({
               {(index) => (
                 <tr>
                   <td style={styles.cell}>{String(sortedRecords[index].key + 1)}</td>
-                  <td style={styles.cell}>{sortedRecords[index].col1}</td>
-                  <td style={styles.cell}>{sortedRecords[index].col2}</td>
+                  <td style={styles.cell}>{sortedRecords[index].name}</td>
+                  <td style={styles.cell}>{sortedRecords[index].address}</td>
                   <td style={styles.cell}>{sortedRecords[index].col3}</td>
                   <td style={styles.cell}>{sortedRecords[index].col4}</td>
                 </tr>
@@ -216,8 +203,23 @@ const List: FunctionComponent = () => {
         pageSize={minSize}
         updateSignal={records}
       >
-        <ul>
-          <VScroller.Body>{(index) => <li>{records[index].col4}</li>}</VScroller.Body>
+        <ul style={{ listStyle: "none", padding: 0, fontSize: 25 }}>
+          <VScroller.Body>
+            {index => (
+              <li
+                style={{
+                  borderColor: "#ccc",
+                  borderWidth: 1,
+                  borderStyle: "solid",
+                  borderRadius: 3,
+                  margin: 5,
+                  padding: 10
+                }}
+              >
+                {records[index].col4}
+              </li>
+            )}
+          </VScroller.Body>
         </ul>
       </VScroller>
     </>
