@@ -1,5 +1,5 @@
-import resolve from "rollup-plugin-node-resolve";
-import babel from "rollup-plugin-babel";
+import resolve from "@rollup/plugin-node-resolve";
+import babel from "@rollup/plugin-babel";
 import external from "rollup-plugin-peer-deps-external";
 import pkg from "./package.json";
 
@@ -29,6 +29,6 @@ export default {
   plugins: [
     resolve({ extensions }),
     external(),
-    babel({ extensions, include: ["src/**/*"], runtimeHelpers: true })
+    babel({ extensions, include: ["src/**/*"], babelHelpers: "runtime" })
   ]
 };
