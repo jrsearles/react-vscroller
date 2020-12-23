@@ -52,7 +52,6 @@ const MemoizedBody = memo<MemoizedBodyProps>(
 
     return children as ReactElement;
   },
-  (a, b) =>
-    a.start === b.start && a.end === b.end && a.more === b.more && a.timestamp === b.timestamp
+  (a, b) => a.timestamp === b.timestamp
 );
 MemoizedBody.displayName = "MemoizedBody";

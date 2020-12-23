@@ -1,7 +1,5 @@
 import { RefObject } from "react";
-import { getScrollParent } from "./dom";
-
-const isFullScreen = (el: HTMLElement) => el === document.body;
+import { getScrollParent, getIntersectionObserverRoot, isFullScreen } from "./dom";
 
 export class Viewport {
   private readonly _source: RefObject<HTMLElement>;
@@ -18,6 +16,10 @@ export class Viewport {
 
   get height() {
     return isFullScreen(this.element) ? window.innerHeight : this.element.offsetHeight;
+  }
+
+  get root() {
+    return getIntersectionObserverRoot(this.element);
   }
 
   get scrollTop() {

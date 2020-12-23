@@ -15,8 +15,8 @@ export class DynamicRowStrategy {
   }
 
   update(state: VScrollerState): VScrollerState {
-    const { y } = this._top.getBoundingClientRect();
     const { count, size, sizes, range } = state;
+    const { y } = this._top.getBoundingClientRect();
     const down = y < this._lastPosition;
 
     // Quick sanity checks
@@ -52,24 +52,15 @@ export class DynamicRowStrategy {
       start = index;
     } else {
       start = Math.max(0, index - size);
-
-      // Need to recalc top because we are iterating down to render bottom
-      // when scrolling up. There is likely some optimizations that can be
-      // done to avoid this.
-      // top = start > 0 ? sizes.calc(0, start) : 0;
     }
 
-    // If the header isn't being rendered, we need to include
-    // it's height in the top filler.
-    // top += start > 0 ? offsets[0] : 0;
-
     const end = Math.min(count, start + size);
-    // const bottom = end < count ? sizes.calc(end, count) + offsets[1] : 0;
     this._lastPosition = y;
 
     return {
       ...state,
       range: { start, end, more: end < count },
+      timestamp: Date.now(),
       scrollTop: this._viewport.scrollTop
     };
   }

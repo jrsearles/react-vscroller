@@ -1,13 +1,13 @@
 import { useRef, useEffect, FunctionComponent } from "react";
 import { cloneElementWithRef } from "./clone-element";
-import { useHandler } from "./use-handler";
+import { useHandler } from "./hooks";
 
 type ResizerProps = {
   onResize: (entry: DOMRectReadOnly) => void;
 };
 
 const listeners = new Map<Element, (entry: DOMRectReadOnly) => void>();
-let observer: ResizeObserver | null;
+let observer: ResizeObserver | null = null;
 
 const listen = (element: Element, handler: (entry: DOMRectReadOnly) => void) => {
   observer =
@@ -18,6 +18,7 @@ const listen = (element: Element, handler: (entry: DOMRectReadOnly) => void) => 
 
   listeners.set(element, handler);
   observer.observe(element);
+  return () => unlisten(element);
 };
 
 const unlisten = (element: Element) => {
@@ -37,8 +38,7 @@ export const Resizer: FunctionComponent<ResizerProps> = ({ onResize, children })
   useEffect(() => {
     const element = ref.current;
     if (element) {
-      listen(element, resizeHandler);
-      return () => unlisten(element);
+      return listen(element, resizeHandler);
     }
   }, [resizeHandler]);
 
