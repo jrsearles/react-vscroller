@@ -1,6 +1,6 @@
 {
   "name": "react-vscroller",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React component which enables virtual rendering of collections",
   "source": "src/index.ts",
   "main": "dist/cjs/index.js",
@@ -55,7 +55,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/resize-observer-browser": "^0.1.4",
-    "babel-loader": "^8.2.2",
+    "babel-plugin-annotate-pure-calls": "^0.4.0",
     "cross-env": "^7.0.3",
     "faker": "^5.1.0",
     "prettier": "^2.2.1",

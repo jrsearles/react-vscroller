@@ -1,7 +1,6 @@
 import React, {
   useEffect,
   useRef,
-  useState,
   useLayoutEffect,
   ReactElement,
   useMemo,
@@ -12,13 +11,13 @@ import { waitForScrollToStop } from "../dom";
 import { ItemSizeCache } from "../ItemSizeCache";
 import { DynamicRowStrategy } from "../DynamicRowStrategy";
 import { Range, VScrollerProps, VScrollerState } from "../VScroller.types";
-import { useHandler } from "./use-handler";
 import { VScrollerHead } from "./VScrollerHead";
 import { VScrollerBody } from "./VScrollerBody";
 import { VScrollerFoot } from "./VScrollerFoot";
 import { VScrollerItem } from "./VScrollerItem";
 import { VScrollerContext } from "./VScrollerContext";
 import { Viewport } from "../Viewport";
+import { useSafeState, useHandler } from "./hooks";
 import * as styles from "../styles";
 
 export interface IVScrollerContainer {
@@ -32,9 +31,9 @@ export interface IVScroller extends IVScrollerContainer {
   Item: typeof VScrollerItem;
 }
 
-const adjustFillers = (current: VScrollerState): VScrollerState => {
-  const { sizes, range, count } = current;
-  let { top, bottom } = sizes.offsets(range, count);
+const applyFillerAdjustments = (current: VScrollerState): VScrollerState => {
+  const { sizes, range } = current;
+  let { top, bottom } = sizes.offsets(range);
 
   if (range.start > 0) {
     top += current.offsets[0];
@@ -61,41 +60,45 @@ const adjustPageSize = (
   viewport: Viewport,
   threshold: number
 ): VScrollerState => {
-  if (current.count <= current.size) {
+  const { size, sizes, range, count } = current;
+
+  if (count <= size) {
     return current;
   }
 
-  const { sizes, range, count } = current;
   const renderHeight = sizes.calc(range);
   const windowHeight = viewport.height + threshold * 2; // account for threshold as well
 
   if (renderHeight > 0 && renderHeight < windowHeight) {
     const renderCount = range.end - range.start;
-    const size = Math.ceil(windowHeight / (renderHeight / renderCount));
-    return { ...current, size, range: rangeFromStart(range.start, size, count) };
+    const size = Math.ceil(windowHeight / renderHeight / renderCount);
+    return {
+      ...current,
+      size,
+      range: rangeFromStart(range.start, size, count),
+      timestamp: Date.now()
+    };
   }
 
   return current;
 };
 
 const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerProps>>(
-  (props) => {
-    const {
-      pageSize = 100,
-      threshold = 300,
-      count,
-      onRangeChanged,
-      fillerStyle,
-      updateSignal,
-      children
-    } = props;
-
+  ({
+    pageSize = 100,
+    threshold = 300,
+    count,
+    onRangeChanged,
+    fillerStyle,
+    updateSignal,
+    children
+  }) => {
     const topRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const ref = useRef<HTMLDivElement>(null);
     const viewport = useMemo(() => new Viewport(topRef), []);
 
-    const [state, setState] = useState<VScrollerState>(() => ({
+    const [state, setState] = useSafeState<VScrollerState>(() => ({
       top: 0,
       bottom: 0,
       scrollTop: null,
@@ -103,42 +106,38 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       range: rangeFromStart(0, pageSize, count),
       offsets: [0, 0],
       sizes: new ItemSizeCache(count),
-      count,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      version: 0,
+      count
     }));
 
     const { range, top, bottom, sizes } = state;
 
-    // useEffect(() => {
-    //   if (state.scrollTop != null) {
-    //     // Keep scroll position in sync with top when a render is triggered.
-    //     // This will help prevent content from appearing to jump when a new
-    //     // block is rendered
-    //     viewport.scrollTop = state.scrollTop;
+    useEffect(() => {
+      if (state.scrollTop != null) {
+        // Keep scroll position in sync with top when a render is triggered.
+        // This will help prevent content from appearing to jump when a new
+        // block is rendered
+        if (Math.abs(viewport.scrollTop - state.scrollTop) >= 1) {
+          viewport.scrollTop = state.scrollTop;
+        }
 
-    //     // We are mutating state to avoid altering the scrollTop if we don't need to
-    //     // during rerenders caused by outside influences.
-    //     state.scrollTop = null;
-    //   }
-    // }, [viewport, state.scrollTop]);
+        // We are mutating state to avoid altering the scrollTop if we don't need to
+        // during rerenders caused by outside influences.
+        state.scrollTop = null;
+      }
+    }, [viewport, state.scrollTop]);
 
     const rangeChangeHandler = useHandler<Range>(onRangeChanged);
     useEffect(() => void rangeChangeHandler(range), [rangeChangeHandler, range]);
 
-    // Main logic for detected when virtual area is entering viewport
+    // Main logic for detecting when virtual area is entering viewport
     useEffect(() => {
-      let mounted = true;
       const strategy = new DynamicRowStrategy(topRef.current!, viewport, threshold);
 
       const update = () => {
-        setState((s) => (mounted ? adjustFillers(strategy.update(s)) : s));
+        setState((s) => applyFillerAdjustments(strategy.update(s)));
       };
-
-      // Note that rootMargin doesn't work as expected when the component is within an iframe,
-      // which means the threshold will not be respected. I suspect there is a workaround here,
-      // but i haven't found it if so.
-      // see: https://github.com/w3c/IntersectionObserver/issues/283
-      const root = viewport.element === document.body ? null : viewport.element;
 
       const observer = new IntersectionObserver(
         (entries) => {
@@ -146,11 +145,11 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
             update();
           }
         },
-        { root, rootMargin: `${threshold}px 0px` }
+        { root: viewport.root, rootMargin: `${threshold}px 0px` }
       );
 
-      observer.observe(bottomRef.current!);
       observer.observe(topRef.current!);
+      observer.observe(bottomRef.current!);
 
       const dragObserver = new IntersectionObserver(
         (entries) => {
@@ -162,13 +161,12 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
             waitForScrollToStop(topRef.current!).then(update);
           }
         },
-        { root }
+        { root: viewport.root }
       );
 
       dragObserver.observe(ref.current!);
 
       return () => {
-        mounted = false;
         observer.disconnect();
         dragObserver.disconnect();
       };
@@ -177,54 +175,46 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
     // Handle viewport resizes - when the viewport is resized we may need to
     // recalculate the filler elements
     useEffect(() => {
-      let mounted = true;
       let lastHeight = viewport.height;
 
-      const cleanup = viewport.onResize(() => {
+      return viewport.onResize(() => {
         if (viewport.height === lastHeight) {
           return;
         }
 
         lastHeight = viewport.height;
         setState((s) => {
-          if (!mounted) {
-            return s;
-          }
-
           s.sizes.reset(s.range);
-          return adjustFillers(s);
+          return applyFillerAdjustments(s);
         });
       });
-
-      return () => {
-        mounted = false;
-        cleanup();
-      };
     }, [viewport, sizes]);
 
-    // Update when new data - reset size cache and adjust range if needed
+    // Force update when we get new data, reset size cache and adjust range if needed
     useEffect(() => {
       setState((s) => {
-        const { size, sizes } = s;
+        const { size, sizes, range } = s;
 
         sizes.resize(count);
+        const start = Math.max(0, Math.min(range.start, count - size));
 
-        const start = Math.max(0, Math.min(s.range.start, count - size));
-        return adjustFillers({
+        return applyFillerAdjustments({
           ...s,
           count,
           range: rangeFromStart(start, size, count),
+          version: s.version + 1,
           timestamp: Date.now()
         });
       });
     }, [count, updateSignal]);
 
     useLayoutEffect(() => {
-      setState(adjustFillers);
-    }, [range]);
+      setState(applyFillerAdjustments);
+    });
 
     // On every render, make sure that enough records are rendered to fill the
-    // screen - otherwise adjust the page size accordingly
+    // screen - otherwise adjust the page size accordingly. In practice this should
+    // only come into play on initial render.
     useEffect(() => {
       setState((s) => adjustPageSize(s, viewport, threshold));
     });

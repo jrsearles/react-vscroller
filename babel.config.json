@@ -21,6 +21,7 @@
         "helpers": true,
         "useESModules": true
       }
-    ]
+    ],
+    "annotate-pure-calls"
   ]
 }

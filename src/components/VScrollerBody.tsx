@@ -1,11 +1,4 @@
-import React, {
-  FunctionComponent,
-  ReactNode,
-  cloneElement,
-  ReactElement,
-  isValidElement,
-  memo
-} from "react";
+import React, { FC, ReactNode, cloneElement, ReactElement, isValidElement, memo } from "react";
 import { useVScrollerState } from "./VScrollerContext";
 import { VScrollerItem } from "./VScrollerItem";
 
@@ -18,9 +11,9 @@ const indices = (start: number, end: number): number[] => {
   return [...Array(end - start)].map((_, i) => i + start);
 };
 
-export const VScrollerBody: FunctionComponent<VScrollerBodyProps> = (props: VScrollerBodyProps) => {
-  const { range, timestamp } = useVScrollerState();
-  return <MemoizedBody {...range} timestamp={timestamp} {...props} />;
+export const VScrollerBody: FC<VScrollerBodyProps> = (props: VScrollerBodyProps) => {
+  const { range, timestamp, version } = useVScrollerState();
+  return <MemoizedBody {...range} timestamp={timestamp} version={version} {...props} />;
 };
 
 type MemoizedBodyProps = VScrollerBodyProps & {
@@ -28,17 +21,16 @@ type MemoizedBodyProps = VScrollerBodyProps & {
   end: number;
   more: boolean;
   timestamp: number;
+  version: number;
 };
 
 const MemoizedBody = memo<MemoizedBodyProps>(
-  ({ start, end, more, children }) => {
+  ({ start, end, more, version, children }) => {
     if (typeof children === "function") {
-      // TODO: ideally we'd be keying off of something other than index -
-      // need to determine how to cleanly do that...
       return (
         <>
           {indices(start, end).map((index) => (
-            <VScrollerItem key={index} index={index}>
+            <VScrollerItem key={`${version}-${index}`} index={index}>
               {(children as Renderer)(index)}
             </VScrollerItem>
           ))}
@@ -52,7 +44,6 @@ const MemoizedBody = memo<MemoizedBodyProps>(
 
     return children as ReactElement;
   },
-  (a, b) =>
-    a.start === b.start && a.end === b.end && a.more === b.more && a.timestamp === b.timestamp
+  (a, b) => a.timestamp === b.timestamp
 );
 MemoizedBody.displayName = "MemoizedBody";

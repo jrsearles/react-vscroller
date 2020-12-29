@@ -1,49 +1,48 @@
 import { RefObject } from "react";
-import { getScrollParent } from "./dom";
+import { getScrollParent, isFullScreen } from "./dom";
+import { IViewport } from "./IViewport";
+import { ScrollableContainer } from "./ScrollableContainer";
+import { ScrollableWindow } from "./ScrollableWindow";
 
-const isFullScreen = (el: HTMLElement) => el === document.body;
-
-export class Viewport {
+export class Viewport implements IViewport {
   private readonly _source: RefObject<HTMLElement>;
-  private _window: HTMLElement | undefined;
+  private _view: IViewport | undefined;
 
   constructor(sourceRef: RefObject<HTMLElement>) {
     this._source = sourceRef;
   }
 
+  get view() {
+    // need to lazily set this as ref will not be set initially
+    if (!this._view) {
+      const parent = getScrollParent(this._source.current!);
+      this._view = isFullScreen(parent) ? new ScrollableWindow() : new ScrollableContainer(parent);
+    }
+
+    return this._view;
+  }
+
   get element() {
-    // Need to do this lazily so ref is set beforehand
-    return this._window || (this._window = getScrollParent(this._source.current!));
+    return this.view.element;
   }
 
   get height() {
-    return isFullScreen(this.element) ? window.innerHeight : this.element.offsetHeight;
+    return this.view.height;
+  }
+
+  get root() {
+    return this.view.root;
   }
 
   get scrollTop() {
-    if (isFullScreen(this.element)) {
-      return document.documentElement.scrollTop ?? document.body.scrollTop;
-    }
-
-    return this.element.scrollTop;
+    return this.view.scrollTop;
   }
 
   set scrollTop(value: number) {
-    if (isFullScreen(this.element)) {
-      document.documentElement.scrollTop = document.body.scrollTop = value;
-    } else {
-      this.element.scrollTop = value;
-    }
+    this.view.scrollTop = value;
   }
 
   onResize(handler: () => void) {
-    if (isFullScreen(this.element)) {
-      window.addEventListener("resize", handler);
-      return () => window.removeEventListener("resize", handler);
-    }
-
-    const observer = new ResizeObserver(handler);
-    observer.observe(this.element);
-    return () => observer.disconnect();
+    return this.view.onResize(handler);
   }
 }
