@@ -22,7 +22,8 @@
     "types": "tsc --declarationDir dist/types --emitDeclarationOnly --declaration true --project tsconfig.build.json ",
     "format": "prettier --write --ignore-unknown \"**/*\"",
     "start": "yarn run storybook",
-    "storybook": "start-storybook"
+    "storybook": "start-storybook",
+    "build-storybook": "build-storybook -o docs-build"
   },
   "keywords": [
     "react",
