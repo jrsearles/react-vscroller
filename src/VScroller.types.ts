@@ -44,4 +44,5 @@ export type VScrollerState = {
   offsets: [number, number];
   count: number;
   timestamp: number;
+  version: number;
 };

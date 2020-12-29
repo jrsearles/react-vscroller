@@ -1,8 +1,18 @@
-import React, { useMemo, CSSProperties, useState, useEffect, FunctionComponent } from "react";
+import React, {
+  useMemo,
+  CSSProperties,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  FC,
+  ReactElement
+} from "react";
 import faker from "faker";
-import { number, withKnobs } from "@storybook/addon-knobs";
+import { number, boolean, withKnobs } from "@storybook/addon-knobs";
 import { VScroller, VScrollerProps, Range } from "..";
 import * as styles from "../styles";
+import { inIFrame } from "../dom";
 
 export default {
   title: "VScroller",
@@ -29,7 +39,7 @@ const createRecord = (key: number): Record => {
 };
 
 type SortDirection = "asc" | "desc" | null;
-const SortIndicator: FunctionComponent<{ dir: SortDirection }> = ({ dir }) => {
+const SortIndicator: FC<{ dir: SortDirection }> = ({ dir }) => {
   switch (dir) {
     case "asc":
       return <>🔽</>;
@@ -40,12 +50,52 @@ const SortIndicator: FunctionComponent<{ dir: SortDirection }> = ({ dir }) => {
   }
 };
 
-const RangeIndicator: FunctionComponent<{ range?: Range }> = ({ range }) => {
+const RangeIndicator: FC<{ range?: Range }> = ({ range }) => {
   return (
-    <div style={{ position: "fixed", top: 0, right: 0, zIndex: 2 }}>
+    <div style={{ position: "fixed", top: 0, left: 5, zIndex: 2 }}>
       {range?.start}-{range?.end}
     </div>
   );
+};
+
+const HeightCell: FC<{ style: CSSProperties }> = (props) => {
+  const [size, setSize] = useState(0);
+  const ref = useRef<HTMLTableCellElement>(null);
+
+  useLayoutEffect(() => {
+    if (ref.current) {
+      setSize(ref.current.clientHeight);
+    }
+  });
+
+  return (
+    <td ref={ref} {...props}>
+      {size}
+    </td>
+  );
+};
+
+const WrapperInScroller: FC<{ wrap: boolean }> = ({ wrap, children }) => {
+  if (wrap && inIFrame()) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          overflow: "scroll",
+          paddingLeft: "1rem",
+          paddingRight: "1rem"
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return children as ReactElement;
 };
 
 const Table = ({
@@ -54,8 +104,9 @@ const Table = ({
 }: { headerStyle: CSSProperties; sticky?: boolean } & Partial<VScrollerProps>) => {
   const [range, setRange] = useState<Range>();
   const count = number("Count", 1000);
-  const threshold = number("Threshold", 100);
+  const threshold = number("Threshold", 200);
   const minSize = number("MinSize", 50);
+  const useIFrameHack = boolean("Use iframe hack", inIFrame() && !!(window as any).chrome);
   const [sortedRecords, setSortedRecords] = useState<Array<Record>>([]);
   const [sort, setSort] = useState<{ col: number | null; dir: "asc" | "desc" | null }>({
     col: null,
@@ -77,10 +128,10 @@ const Table = ({
         let key: keyof Record;
         switch (sort.col) {
           case 1:
-            key = "col1";
+            key = "name";
             break;
           case 2:
-            key = "col2";
+            key = "address";
             break;
           case 3:
             key = "col3";
@@ -88,10 +139,12 @@ const Table = ({
           case 4:
             key = "col4";
             break;
+          default:
+            return 0;
         }
 
-        let left = sort.dir === "desc" ? b[key!] : a[key!];
-        let right = sort.dir === "desc" ? a[key!] : b[key!];
+        let left = sort.dir === "desc" ? b[key] : a[key];
+        let right = sort.dir === "desc" ? a[key] : b[key];
         return String(left).localeCompare(String(right));
       });
     });
@@ -115,7 +168,7 @@ const Table = ({
   };
 
   return (
-    <>
+    <WrapperInScroller wrap={useIFrameHack}>
       <RangeIndicator range={range} />
       <VScroller
         count={sortedRecords.length}
@@ -140,7 +193,7 @@ const Table = ({
                     Address {sort.col === 2 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
-                <th style={{ ...headerStyle, width: "35%" }}>
+                <th style={{ ...headerStyle, width: "30%" }}>
                   <a onClick={() => toggleSort(3)}>
                     Random Text {sort.col === 3 && <SortIndicator dir={sort.dir} />}
                   </a>
@@ -150,6 +203,7 @@ const Table = ({
                     Random Details {sort.col === 4 && <SortIndicator dir={sort.dir} />}
                   </a>
                 </th>
+                <th style={{ ...headerStyle, width: "5%" }}>Height</th>
               </tr>
             </thead>
           </VScroller.Head>
@@ -162,6 +216,7 @@ const Table = ({
                   <td style={styles.cell}>{sortedRecords[index].address}</td>
                   <td style={styles.cell}>{sortedRecords[index].col3}</td>
                   <td style={styles.cell}>{sortedRecords[index].col4}</td>
+                  <HeightCell style={styles.cell} />
                 </tr>
               )}
             </VScroller.Body>
@@ -169,7 +224,7 @@ const Table = ({
           <VScroller.Foot>
             <tfoot>
               <tr>
-                <td colSpan={5} style={styles.footerCell}>
+                <td colSpan={6} style={styles.footerCell}>
                   Count: {count}
                 </td>
               </tr>
@@ -177,11 +232,11 @@ const Table = ({
           </VScroller.Foot>
         </table>
       </VScroller>
-    </>
+    </WrapperInScroller>
   );
 };
 
-const List: FunctionComponent = () => {
+const List: FC = () => {
   const [range, setRange] = useState<Range>();
   const count = number("Count", 1000);
   const threshold = number("Threshold", 300);
@@ -205,7 +260,7 @@ const List: FunctionComponent = () => {
       >
         <ul style={{ listStyle: "none", padding: 0, fontSize: 25 }}>
           <VScroller.Body>
-            {index => (
+            {(index) => (
               <li
                 style={{
                   borderColor: "#ccc",

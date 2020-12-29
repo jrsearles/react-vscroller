@@ -51,14 +51,16 @@ export class ItemSizeCache {
     return Math.ceil(height);
   }
 
-  offsets(range: Range, count: number) {
+  offsets(range: Range) {
     const top = this.calc(0, range.start);
-    const bottom = this.calc(range.end, count);
+    const bottom = this.calc(range.end, this._sizes.length);
     return { top, bottom };
   }
 
   reset(rangeToKeep?: Range) {
-    this._lastAvg = 0;
+    if (rangeToKeep) {
+      this._lastAvg = 0;
+    }
 
     for (let i = 0; i < this._sizes.length; i++) {
       // Clear anything that is not currently rendered
