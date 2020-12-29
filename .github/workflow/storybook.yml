@@ -1,0 +1,32 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  docs-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Setup node 12
+        uses: actions/setup-node@v2
+        with:
+          node-version: 12.x
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn run build-storybook
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@3.6.2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs-build
+          CLEAN: true
