@@ -100,18 +100,27 @@ const WrapperInScroller: FC<{ wrap: boolean }> = ({ wrap, children }) => {
 
 const Table = ({
   headerStyle,
-  sticky
-}: { headerStyle: CSSProperties; sticky?: boolean } & Partial<VScrollerProps>) => {
+  sticky,
+  excludeIFrameHack
+}: {
+  headerStyle: CSSProperties;
+  sticky?: boolean;
+  excludeIFrameHack?: boolean;
+} & Partial<VScrollerProps>) => {
   const [range, setRange] = useState<Range>();
   const count = number("Count", 1000);
   const threshold = number("Threshold", 200);
   const minSize = number("MinSize", 50);
-  const useIFrameHack = boolean("Use iframe hack", inIFrame() && !!(window as any).chrome);
   const [sortedRecords, setSortedRecords] = useState<Array<Record>>([]);
   const [sort, setSort] = useState<{ col: number | null; dir: "asc" | "desc" | null }>({
     col: null,
     dir: null
   });
+
+  let useIFrameHack = false;
+  if (!excludeIFrameHack) {
+    useIFrameHack = boolean("Use iframe hack", inIFrame() && !!(window as any).chrome);
+  }
 
   const records = useMemo<Array<Record>>(
     () => Array.from(Array(count), (_, i) => createRecord(i)),
@@ -292,7 +301,7 @@ export const VirtualGrid = () => {
 export const VirtualGridInScrollableContainerWithStickyHeader = () => {
   return (
     <div style={{ width: "80vw", height: "80vh", overflow: "auto", position: "relative" }}>
-      <Table headerStyle={styles.stickyHeaderCell} sticky />
+      <Table headerStyle={styles.stickyHeaderCell} sticky excludeIFrameHack />
     </div>
   );
 };
