@@ -11,7 +11,9 @@ export const VScrollerContext = createContext<VScrollerState>({
   offsets: [0, 0],
   count: 0,
   scrollTop: null,
-  timestamp: 0
+  timestamp: 0,
+  version: 0
 });
+VScrollerContext.displayName = "VScrollerContext";
 
 export const useVScrollerState = () => useContext(VScrollerContext);

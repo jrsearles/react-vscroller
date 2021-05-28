@@ -1,16 +1,9 @@
-import React, {
-  useEffect,
-  useRef,
-  useLayoutEffect,
-  ReactElement,
-  useMemo,
-  PropsWithChildren,
-  memo
-} from "react";
+import React, { useEffect, useRef, ReactElement, useMemo, PropsWithChildren, memo } from "react";
 import { waitForScrollToStop } from "../dom";
 import { ItemSizeCache } from "../ItemSizeCache";
 import { DynamicRowStrategy } from "../DynamicRowStrategy";
-import { Range, VScrollerProps, VScrollerState } from "../VScroller.types";
+import { Range } from "../Range";
+import { VScrollerProps, VScrollerState } from "../VScroller.types";
 import { VScrollerHead } from "./VScrollerHead";
 import { VScrollerBody } from "./VScrollerBody";
 import { VScrollerFoot } from "./VScrollerFoot";
@@ -31,7 +24,7 @@ export interface IVScroller extends IVScrollerContainer {
   Item: typeof VScrollerItem;
 }
 
-const applyFillerAdjustments = (current: VScrollerState): VScrollerState => {
+const applyFillerAdjustments = (current: VScrollerState) => {
   const { sizes, range } = current;
   let { top, bottom } = sizes.offsets(range);
 
@@ -48,11 +41,6 @@ const applyFillerAdjustments = (current: VScrollerState): VScrollerState => {
   }
 
   return { ...current, top, bottom };
-};
-
-const rangeFromStart = (start: number, size: number, count: number): Range => {
-  const end = Math.min(start + size, count);
-  return { start, end, more: end < count };
 };
 
 const adjustPageSize = (
@@ -75,7 +63,7 @@ const adjustPageSize = (
     return {
       ...current,
       size,
-      range: rangeFromStart(range.start, size, count),
+      range: new Range(range.start, size, count),
       timestamp: Date.now()
     };
   }
@@ -84,7 +72,7 @@ const adjustPageSize = (
 };
 
 const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerProps>>(
-  ({
+  function VScroller({
     pageSize = 100,
     threshold = 300,
     count,
@@ -92,7 +80,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
     fillerStyle,
     updateSignal,
     children
-  }) => {
+  }) {
     const topRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const ref = useRef<HTMLDivElement>(null);
@@ -103,7 +91,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       bottom: 0,
       scrollTop: null,
       size: pageSize,
-      range: rangeFromStart(0, pageSize, count),
+      range: new Range(0, pageSize, count),
       offsets: [0, 0],
       sizes: new ItemSizeCache(count),
       timestamp: Date.now(),
@@ -111,7 +99,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
       count
     }));
 
-    const { range, top, bottom, sizes } = state;
+    const { range, top, bottom } = state;
 
     useEffect(() => {
       if (state.scrollTop != null) {
@@ -120,11 +108,8 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
         // block is rendered
         if (Math.abs(viewport.scrollTop - state.scrollTop) >= 1) {
           viewport.scrollTop = state.scrollTop;
+          setState((s) => ({ ...s, scrollTop: null }));
         }
-
-        // We are mutating state to avoid altering the scrollTop if we don't need to
-        // during rerenders caused by outside influences.
-        state.scrollTop = null;
       }
     }, [viewport, state.scrollTop]);
 
@@ -188,7 +173,7 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
           return applyFillerAdjustments(s);
         });
       });
-    }, [viewport, sizes]);
+    }, [viewport]);
 
     // Force update when we get new data, reset size cache and adjust range if needed
     useEffect(() => {
@@ -201,22 +186,18 @@ const MemoizedVScroller: IVScrollerContainer = memo<PropsWithChildren<VScrollerP
         return applyFillerAdjustments({
           ...s,
           count,
-          range: rangeFromStart(start, size, count),
+          range: new Range(start, size, count),
           version: s.version + 1,
           timestamp: Date.now()
         });
       });
     }, [count, updateSignal]);
 
-    useLayoutEffect(() => {
-      setState(applyFillerAdjustments);
-    });
-
     // On every render, make sure that enough records are rendered to fill the
     // screen - otherwise adjust the page size accordingly. In practice this should
     // only come into play on initial render.
     useEffect(() => {
-      setState((s) => adjustPageSize(s, viewport, threshold));
+      setState((s) => applyFillerAdjustments(adjustPageSize(s, viewport, threshold)));
     });
 
     return (

@@ -1,4 +1,4 @@
-import { Range } from "VScroller.types";
+import { Range } from "./Range";
 
 export class ItemSizeCache {
   private readonly _sizes: (number | null)[];
