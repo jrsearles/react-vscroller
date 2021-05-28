@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { ItemSizeCache } from "./ItemSizeCache";
+import { Range } from "./Range";
 
 export type VScrollerProps = {
   /**
@@ -31,8 +32,6 @@ export type VScrollerProps = {
    */
   updateSignal?: unknown;
 };
-
-export type Range = { start: number; end: number; more: boolean };
 
 export type VScrollerState = {
   top: number;
